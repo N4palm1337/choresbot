@@ -166,4 +166,4 @@ cython_debug/
 choresbot/
 
 # super secret bot api data
-data.env
+.env
