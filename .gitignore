@@ -167,3 +167,6 @@ choresbot/
 
 # super secret bot api data
 .env
+
+# local database
+db/
