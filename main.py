@@ -10,6 +10,27 @@ TOKEN = getenv('TOKEN')
 DAD = int(getenv('DAD'))
 MAX = int(getenv('MAX'))
 
+with open('message_texts/start_message', 'r') as f:
+    start_message = f.read()
+
+with open('message_texts/info_message_parent', 'r') as f:
+    info_message_parent = f.read()
+
+with open('message_texts/info_message_child', 'r') as f:
+    info_message_child = f.read()
+
+with open('message_texts/add_chore_failure_format', 'r') as f:
+    add_chore_failure_format = f.read()
+
+with open('message_texts/add_chore_failure_child_name', 'r') as f:
+    add_chore_failure_child_name = f.read()
+
+with open('message_texts/add_chore_failure_no_access', 'r') as f:
+    add_chore_failure_no_access = f.read()
+
+with open('message_texts/add_chore_success', 'r') as f:
+    add_chore_success = f.read()
+
 DELAY = 10
 
 bot = telebot.TeleBot(TOKEN, parse_mode=None)
@@ -18,40 +39,34 @@ uninit = TinyDB('db/uninit.json')
 
 @bot.message_handler(commands=['start'])
 def introduce(message):
-    with open('message_texts/start_message', 'r') as f:
-        bot.reply_to(message, f.read())
+    bot.reply_to(message, start_message)
 
 @bot.message_handler(commands=['info'])
 def give_info(message):
     if message.from_user.id != DAD and message.from_user.id != MAX:
-        with open('message_texts/info_message_child', 'r') as f:
-            bot.reply_to(message, f.read())
+        bot.reply_to(message, info_message_child)
     else:
-        with open('message_texts/info_message_parent', 'r') as f:
-            bot.reply_to(message, f.read(), parse_mode='MarkdownV2')
+        bot.reply_to(message, info_message_parent, parse_mode='MarkdownV2')
 
 @bot.message_handler(commands=['addchore'])
 def add_chore(message): 
     # checking access rights
     if message.from_user.id != DAD and message.from_user.id != MAX:
-        with open('message_texts/add_chore_no_access', 'r') as f:
-            bot.reply_to(message, f.read())
+        bot.reply_to(message, add_chore_failure_no_access)
         # print(message.from_user.id)
     
     # breaking message into lines and checking time format
     try:
         args = message_parser.parse_add_chore(message)
     except:
-        with open('message_texts/add_chore_failure_format', 'r') as f:
-            bot.reply_to(message, f.read())
+        bot.reply_to(message, add_chore_failure_format)
         return
     
     # checking child name
     try:
         designated_child = int(getenv(args[0], default='nuhuh'))
     except:
-        with open('message_texts/add_chore_failure_child_name', 'r') as f:
-            bot.reply_to(message, f.read())
+        bot.reply_to(message, add_chore_failure_child_name)
         return
     
     with open('db/id_counter', 'r') as f:
@@ -62,8 +77,7 @@ def add_chore(message):
     with open('db/id_counter', 'w') as f:
         f.write(str(_id_ + 1))
     
-    with open('message_texts/add_chore_success', 'r') as f:
-        bot.reply_to(message, f.read())
+    bot.reply_to(message, add_chore_success)
 
 
 def send_reminder():
