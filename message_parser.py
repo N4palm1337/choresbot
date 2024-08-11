@@ -1,4 +1,4 @@
-import time, string
+import time
 
 
 def parse_add_chore(message):
