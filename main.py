@@ -1,7 +1,7 @@
 import telebot, threading, time
 from dotenv import load_dotenv
 from os import getenv
-# import tinydb
+from tinydb import TinyDB, where
 import message_texts, message_parser
 
 load_dotenv()
@@ -10,60 +10,71 @@ TOKEN = getenv('TOKEN')
 DAD = int(getenv('DAD'))
 MAX = int(getenv('MAX'))
 
-DELAY = 30
+DELAY = 10
 
 bot = telebot.TeleBot(TOKEN, parse_mode=None)
 
-# uninit = tinydb.TinyDB('db/uninit.json')
+uninit = TinyDB('db/uninit.json')
 
 @bot.message_handler(commands=['start'])
 def introduce(message):
-    bot.reply_to(message, message_texts.start_message)
+    with open('message_texts/start_message', 'r') as f:
+        bot.reply_to(message, f.read())
 
 @bot.message_handler(commands=['info'])
 def give_info(message):
     if message.from_user.id != DAD and message.from_user.id != MAX:
-        bot.reply_to(message, message_texts.info_message_child)
+        with open('message_texts/info_message_child', 'r') as f:
+            bot.reply_to(message, f.read())
     else:
-        bot.reply_to(message, message_texts.info_message_parent)
-
+        with open('message_texts/info_message_parent', 'r') as f:
+            bot.reply_to(message, f.read(), parse_mode='MarkdownV2')
 
 @bot.message_handler(commands=['addchore'])
 def add_chore(message): 
     # checking access rights
     if message.from_user.id != DAD and message.from_user.id != MAX:
-        bot.reply_to(message, message_texts.add_chore_message_no_access)
-        return
+        with open('message_texts/add_chore_no_access', 'r') as f:
+            bot.reply_to(message, f.read())
         # print(message.from_user.id)
     
     # breaking message into lines and checking time format
     try:
         args = message_parser.parse_add_chore(message)
     except:
-        bot.reply_to(message, message_texts.add_chore_failure_format)
+        with open('message_texts/add_chore_failure_format', 'r') as f:
+            bot.reply_to(message, f.read())
         return
     
     # checking child name
     try:
         designated_child = int(getenv(args[0], default='nuhuh'))
     except:
-        bot.reply_to(message, message_texts.add_chore_failure_child_name)
+        with open('message_texts/add_chore_failure_child_name', 'r') as f:
+            bot.reply_to(message, f.read())
         return
     
     with open('db/id_counter', 'r') as f:
         _id_ = int(f.read())
         
-    # uninit.insert({'id': _id_, 'to': designated_child, 'desc': args[1], 'time': args[2]})
+    uninit.insert({'id': _id_, 'to': designated_child, 'desc': args[1], 'time': args[2]})
     
     with open('db/id_counter', 'w') as f:
         f.write(str(_id_ + 1))
     
-    bot.reply_to(message, message_texts.add_chore_success)
+    with open('message_texts/add_chore_success', 'r') as f:
+        bot.reply_to(message, f.read())
 
 
 def send_reminder():
     while True:
-        # send reminders (todo)
+        tasks = uninit.search(where('time') <= time.time_ns())
+        
+        for task in tasks:
+            bot.send_message(task['to'], task['desc'])
+            print(f"logging: sent reminder to {task['to']} about task with id {task['id']}")
+            uninit.remove(where('id') == task['id'])
+            
         time.sleep(DELAY)
         
 
