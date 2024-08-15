@@ -1,8 +1,11 @@
 import telebot, threading, time
+import message_parser
 from dotenv import load_dotenv
 from os import getenv
-from tinydb import TinyDB, where
-import message_texts, message_parser
+from tinydb import TinyDB, where, operations
+from datetime import datetime
+from croniter import croniter
+from pytz import timezone
 
 load_dotenv()
 
@@ -10,26 +13,24 @@ TOKEN = getenv('TOKEN')
 DAD = int(getenv('DAD'))
 MAX = int(getenv('MAX'))
 
-with open('message_texts/start_message', 'r') as f:
-    start_message = f.read()
 
-with open('message_texts/info_message_parent', 'r') as f:
-    info_message_parent = f.read()
+name_to_id = {}
+for child in ['MAX', 'STE', 'KSU', 'VAL']:
+    name_to_id[child] = int(getenv(child))
 
-with open('message_texts/info_message_child', 'r') as f:
-    info_message_child = f.read()
+start_message = message_parser.read_message_text('start_message')
 
-with open('message_texts/add_chore_failure_format', 'r') as f:
-    add_chore_failure_format = f.read()
+info_message_parent = message_parser.read_message_text('info_message_parent')
 
-with open('message_texts/add_chore_failure_child_name', 'r') as f:
-    add_chore_failure_child_name = f.read()
+info_message_child = message_parser.read_message_text('info_message_child')
 
-with open('message_texts/add_chore_failure_no_access', 'r') as f:
-    add_chore_failure_no_access = f.read()
+add_chore_failure_format = message_parser.read_message_text('add_chore_failure_format')
 
-with open('message_texts/add_chore_success', 'r') as f:
-    add_chore_success = f.read()
+add_chore_failure_child_name = message_parser.read_message_text('add_chore_failure_child_name')
+
+add_chore_failure_no_access = message_parser.read_message_text('add_chore_failure_no_access')
+
+add_chore_success = message_parser.read_message_text('add_chore_success')
 
 DELAY = 10
 
@@ -63,32 +64,36 @@ def add_chore(message):
         return
     
     # checking child name
-    try:
-        designated_child = int(getenv(args[0], default='nuhuh'))
-    except:
+    if args[0] not in ['MAX', 'STE', 'KSU', 'VAL']:
         bot.reply_to(message, add_chore_failure_child_name)
         return
+    else:
+        designated_child = name_to_id[args[0]]
     
     with open('db/id_counter', 'r') as f:
         _id_ = int(f.read())
         
-    uninit.insert({'id': _id_, 'to': designated_child, 'desc': args[1], 'time': args[2]})
+    uninit.insert({'id': _id_, 'to': designated_child, 'desc': args[1], 'time': args[2], 'cron': args[3]})
     
     with open('db/id_counter', 'w') as f:
         f.write(str(_id_ + 1))
     
-    bot.reply_to(message, add_chore_success)
+    bot.reply_to(message, add_chore_success + str(_id_))
 
 
 def send_reminder():
     while True:
-        tasks = uninit.search(where('time') <= time.time_ns())
+        tasks = uninit.search(where('time') <= time.time())
         
         for task in tasks:
             bot.send_message(task['to'], task['desc'])
-            print(f"logging: sent reminder to {task['to']} about task with id {task['id']}")
-            uninit.remove(where('id') == task['id'])
-            
+            bot.send_message(DAD, f"sent reminder to {task['to']} about task with id {task['id']}")
+            if task['cron'] is not None:
+                uninit.update(operations.set('time', (croniter(task['cron'], 
+                                                               datetime.now(tz=timezone('Europe/Moscow')))).get_next()), where('id') == task['id'])
+            else:
+                uninit.remove(where('id') == task['id'])
+        
         time.sleep(DELAY)
         
 
