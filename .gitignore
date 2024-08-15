@@ -170,3 +170,6 @@ choresbot/
 
 # local database
 db/
+
+# test.py
+test.py
