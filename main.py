@@ -1,4 +1,4 @@
-import telebot, threading, time
+import time, asyncio, logging
 import message_parser
 from dotenv import load_dotenv
 from os import getenv
@@ -6,6 +6,8 @@ from tinydb import TinyDB, where, operations
 from datetime import datetime
 from croniter import croniter
 from pytz import timezone
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -39,22 +41,25 @@ bot = telebot.TeleBot(TOKEN, parse_mode=None)
 uninit = TinyDB('db/uninit.json')
 
 @bot.message_handler(commands=['start'])
-def introduce(message):
-    bot.reply_to(message, start_message)
+async def introduce(message):
+    logger.info('Entered introduce')
+    await bot.reply_to(message, start_message)
 
 @bot.message_handler(commands=['info'])
-def give_info(message):
+async def give_info(message):
+    logger.info('Entered give_info')
     if message.from_user.id != DAD and message.from_user.id != MAX:
         bot.reply_to(message, info_message_child)
     else:
         bot.reply_to(message, info_message_parent, parse_mode='MarkdownV2')
 
 @bot.message_handler(commands=['addchore'])
-def add_chore(message): 
+async def add_chore(message):
+    logger.info('Entered add_chore') 
     # checking access rights
     if message.from_user.id != DAD and message.from_user.id != MAX:
-        bot.reply_to(message, add_chore_failure_no_access)
-        # print(message.from_user.id)
+        await bot.reply_to(message, add_chore_failure_no_access)
+        return
     
     # breaking message into lines and checking time format
     try:
@@ -78,32 +83,61 @@ def add_chore(message):
     with open('db/id_counter', 'w') as f:
         f.write(str(_id_ + 1))
     
-    bot.reply_to(message, add_chore_success + str(_id_))
+    await bot.reply_to(message, add_chore_success + str(_id_))
+    
+@bot.message_handler(commands=['logout'])
+async def log_out(message):
+    logger.info('Entered log_out')
+    if message.from_user.id != MAX:
+        await bot.reply_to(message, 'Я Вас не понял. Попробуйте ещё раз.')
+        return
+    
+    await bot.reply_to(message, 'logging out')
+    bot.log_out()
 
+@bot.message_handler()
+async def unknown_command(message):
+    logger.info('Entered unknown_command')
+    await bot.reply_to(message, 'Я вас не понял. Попробуйте ещё раз.')
 
-def send_reminder():
+async def send_reminder():
+    logger.info('Entered send_reminder')
     while True:
+        # logger.info('Entered send_reminder loop')
+        
         tasks = uninit.search(where('time') <= time.time())
         
         for task in tasks:
-            bot.send_message(task['to'], task['desc'])
-            bot.send_message(DAD, f"sent reminder to {task['to']} about task with id {task['id']}")
+            await bot.send_message(task['to'], task['desc'])
+            # bot.send_message(DAD, f"sent reminder to {task['to']} about task with id {task['id']}")
+            logger.info(f"sent reminder to {task['to']} about task with id {task['id']}")
             if task['cron'] is not None:
                 uninit.update(operations.set('time', (croniter(task['cron'], 
                                                                datetime.now(tz=timezone('Europe/Moscow')))).get_next()), where('id') == task['id'])
             else:
                 uninit.remove(where('id') == task['id'])
         
-        time.sleep(DELAY)
-        
+        await asyncio.sleep(DELAY)
 
 
-reminder_thread = threading.Thread(target=send_reminder)
-reminder_thread.start()
+async def main():
+    logger.info('Entered main')
+    fetch_task = asyncio.create_task(bot.infinity_polling())
+    send_task = asyncio.create_task(send_reminder())
+    await fetch_task
+    await send_task
 
 
-while True:
-    try:
-        bot.infinity_polling()
-    except:
-        time.sleep(10)
+if __name__ == '__main__':
+    logging.basicConfig(
+        filename='logs/bot.log',
+        encoding='utf-8',
+        filemode='a',
+        format='{asctime} - {levelname} - {message}',
+        style='{',
+        datefmt='%d/%m/%Y %H:%M:%S',
+        level=logging.INFO
+    )
+    logger.info('---------------------------')
+    logger.info('About to enter main')
+    asyncio.run(main())
