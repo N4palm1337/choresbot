@@ -1,5 +1,6 @@
 import time, asyncio, logging
 import message_parser
+from telebot.async_telebot import AsyncTeleBot
 from dotenv import load_dotenv
 from os import getenv
 from tinydb import TinyDB, where, operations
@@ -36,7 +37,7 @@ add_chore_success = message_parser.read_message_text('add_chore_success')
 
 DELAY = 10
 
-bot = telebot.TeleBot(TOKEN, parse_mode=None)
+bot = AsyncTeleBot(TOKEN, parse_mode=None)
 
 uninit = TinyDB('db/uninit.json')
 
