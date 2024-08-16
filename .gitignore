@@ -173,3 +173,6 @@ db/
 
 # test.py
 test.py
+
+# logs
+logs/

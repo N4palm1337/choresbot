@@ -1,4 +1,4 @@
-import time, asyncio
+import time, asyncio, logging
 import message_parser
 from telebot.async_telebot import AsyncTeleBot
 from dotenv import load_dotenv
@@ -7,6 +7,8 @@ from tinydb import TinyDB, where, operations
 from datetime import datetime
 from croniter import croniter
 from pytz import timezone
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -41,21 +43,24 @@ uninit = TinyDB('db/uninit.json')
 
 @bot.message_handler(commands=['start'])
 async def introduce(message):
+    logger.info('Entered introduce')
     await bot.reply_to(message, start_message)
 
 @bot.message_handler(commands=['info'])
 async def give_info(message):
+    logger.info('Entered give_info')
     if message.from_user.id != DAD and message.from_user.id != MAX:
         await bot.reply_to(message, info_message_child)
     else:
         await bot.reply_to(message, info_message_parent, parse_mode='MarkdownV2')
 
 @bot.message_handler(commands=['addchore'])
-async def add_chore(message): 
+async def add_chore(message):
+    logger.info('Entered add_chore') 
     # checking access rights
     if message.from_user.id != DAD and message.from_user.id != MAX:
         await bot.reply_to(message, add_chore_failure_no_access)
-        # print(message.from_user.id)
+        return
     
     # breaking message into lines and checking time format
     try:
@@ -83,12 +88,15 @@ async def add_chore(message):
 
 
 async def send_reminder():
+    logger.info('Entered send_reminder')
     while True:
+        # logger.info('Entered send_reminder loop')
+        
         tasks = uninit.search(where('time') <= time.time())
         
         for task in tasks:
             await bot.send_message(task['to'], task['desc'])
-            await bot.send_message(DAD, f"sent reminder to {task['to']} about task with id {task['id']}")
+            # bot.send_message(DAD, f"sent reminder to {task['to']} about task with id {task['id']}")
             if task['cron'] is not None:
                 uninit.update(operations.set('time', (croniter(task['cron'], 
                                                                datetime.now(tz=timezone('Europe/Moscow')))).get_next()), where('id') == task['id'])
@@ -99,12 +107,23 @@ async def send_reminder():
 
 
 async def main():
+    logger.info('Entered main')
     fetch_task = asyncio.create_task(bot.infinity_polling())
     send_task = asyncio.create_task(send_reminder())
-    
     await fetch_task
     await send_task
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        filename='logs/bot.log',
+        encoding='utf-8',
+        filemode='a',
+        format='{asctime} - {levelname} - {message}',
+        style='{',
+        datefmt='%d/%m/%Y %H:%M:%S',
+        level=logging.INFO
+    )
+    logger.info('---------------------------')
+    logger.info('About to enter main')
     asyncio.run(main())
