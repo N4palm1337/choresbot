@@ -85,7 +85,21 @@ async def add_chore(message):
         f.write(str(_id_ + 1))
     
     await bot.reply_to(message, add_chore_success + str(_id_))
+    
+@bot.message_handler(commands=['logout'])
+async def log_out(message):
+    logger.info('Entered log_out')
+    if message.from_user.id != MAX:
+        await bot.reply_to(message, 'Я Вас не понял. Попробуйте ещё раз.')
+        return
+    
+    await bot.reply_to(message, 'logging out')
+    bot.log_out()
 
+@bot.message_handler()
+async def unknown_command(message):
+    logger.info('Entered unknown_command')
+    await bot.reply_to(message, 'Я вас не понял. Попробуйте ещё раз.')
 
 async def send_reminder():
     logger.info('Entered send_reminder')
@@ -97,6 +111,7 @@ async def send_reminder():
         for task in tasks:
             await bot.send_message(task['to'], task['desc'])
             # bot.send_message(DAD, f"sent reminder to {task['to']} about task with id {task['id']}")
+            logger.info(f"sent reminder to {task['to']} about task with id {task['id']}")
             if task['cron'] is not None:
                 uninit.update(operations.set('time', (croniter(task['cron'], 
                                                                datetime.now(tz=timezone('Europe/Moscow')))).get_next()), where('id') == task['id'])
