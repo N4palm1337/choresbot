@@ -50,9 +50,9 @@ async def introduce(message):
 async def give_info(message):
     logger.info('Entered give_info')
     if message.from_user.id != DAD and message.from_user.id != MAX:
-        bot.reply_to(message, info_message_child)
+        await bot.reply_to(message, info_message_child)
     else:
-        bot.reply_to(message, info_message_parent, parse_mode='MarkdownV2')
+        await bot.reply_to(message, info_message_parent, parse_mode='MarkdownV2')
 
 @bot.message_handler(commands=['addchore'])
 async def add_chore(message):
@@ -66,12 +66,12 @@ async def add_chore(message):
     try:
         args = message_parser.parse_add_chore(message)
     except:
-        bot.reply_to(message, add_chore_failure_format)
+        await bot.reply_to(message, add_chore_failure_format)
         return
     
     # checking child name
     if args[0] not in ['MAX', 'STE', 'KSU', 'VAL']:
-        bot.reply_to(message, add_chore_failure_child_name)
+        await bot.reply_to(message, add_chore_failure_child_name)
         return
     else:
         designated_child = name_to_id[args[0]]
