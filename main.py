@@ -94,7 +94,8 @@ async def log_out(message):
         return
     
     await bot.reply_to(message, 'logging out')
-    bot.log_out()
+    await bot.log_out()
+    exit(0)
 
 @bot.message_handler()
 async def unknown_command(message):
