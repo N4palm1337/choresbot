@@ -16,7 +16,8 @@ def parse_add_chore(message):
 
 
 def convert_to_unix_time(time_str):
-    return time.mktime(time.strptime(time_str, '%d/%m/%Y %H:%M'))
+    time_str = time_str.rstrip() + ' MSK'
+    return time.mktime(time.strptime(time_str, '%d/%m/%Y %H:%M %Z'))
 
 def read_message_text(name: str):
     with open(f'message_texts/{name}', 'r') as f:
