@@ -97,6 +97,22 @@ async def log_out(message):
     await bot.log_out()
     exit(0)
 
+@bot.message_handler(commands=['delchore'])
+async def delete_chore(message):
+    if message.from_user.id != DAD and message.from_user.id != MAX:
+        await bot.reply_to(message, add_chore_failure_no_access)
+        return
+    
+    args = list(message.text.split())
+    try:
+        _id_ = int(args[1])
+    except:
+        await bot.reply_to(message, 'Что-то с ID. Попробуйте ещё раз.')
+        return
+    
+    uninit.remove(where('id') == _id_)
+    await bot.reply_to(message, f'Удалил задание с id {_id_}')
+
 @bot.message_handler()
 async def unknown_command(message):
     logger.info('Entered unknown_command')
