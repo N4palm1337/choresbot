@@ -13,13 +13,20 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 TOKEN = getenv('TOKEN')
-DAD = int(getenv('DAD'))
 MAX = int(getenv('MAX'))
+DAD = int(getenv('DAD'))
+
+parents = [int(getenv('DAD')), int(getenv('MAX'))]
+children = ['MAX', 'STE', 'KSU', 'VAL']
 
 
 name_to_id = {}
-for child in ['MAX', 'STE', 'KSU', 'VAL']:
+for child in children:
     name_to_id[child] = int(getenv(child))
+    
+id_to_name = {}
+for child in children:
+    id_to_name[name_to_id[child]] = child
 
 start_message = message_parser.read_message_text('start_message')
 
@@ -35,30 +42,39 @@ add_chore_failure_no_access = message_parser.read_message_text('add_chore_failur
 
 add_chore_success = message_parser.read_message_text('add_chore_success')
 
+delete_chore_failure_no_access = message_parser.read_message_text('delete_chore_failure_no_access')
+
+change_chore_failure_no_access = message_parser.read_message_text('change_chore_failure_no_access')
+
+change_chore_failure_format = message_parser.read_message_text('change_chore_failure_format')
+
 DELAY = 10
 
 bot = AsyncTeleBot(TOKEN, parse_mode=None)
 
 uninit = TinyDB('db/uninit.json')
 
+
 @bot.message_handler(commands=['start'])
 async def introduce(message):
     logger.info('Entered introduce')
     await bot.reply_to(message, start_message)
+    
 
 @bot.message_handler(commands=['info'])
 async def give_info(message):
     logger.info('Entered give_info')
-    if message.from_user.id != DAD and message.from_user.id != MAX:
+    if message.from_user.id not in parents:
         await bot.reply_to(message, info_message_child)
     else:
         await bot.reply_to(message, info_message_parent, parse_mode='MarkdownV2')
+        
 
 @bot.message_handler(commands=['addchore'])
 async def add_chore(message):
     logger.info('Entered add_chore') 
     # checking access rights
-    if message.from_user.id != DAD and message.from_user.id != MAX:
+    if message.from_user.id not in parents:
         await bot.reply_to(message, add_chore_failure_no_access)
         return
     
@@ -70,7 +86,7 @@ async def add_chore(message):
         return
     
     # checking child name
-    if args[0] not in ['MAX', 'STE', 'KSU', 'VAL']:
+    if args[0] not in children:
         await bot.reply_to(message, add_chore_failure_child_name)
         return
     else:
@@ -86,6 +102,86 @@ async def add_chore(message):
     
     await bot.reply_to(message, add_chore_success + str(_id_))
     
+
+@bot.message_handler(commands=['delchore'])
+async def delete_chore(message):
+    logger.info('Entered delete_chore')
+    if message.from_user.id not in parents:
+        await bot.reply_to(message, delete_chore_failure_no_access)
+        return
+    
+    args = list(message.text.split())
+    if len(args) != 2:
+        await bot.reply_to(message, 'Неправильный формат. Попробуйте еще раз.')
+        return
+    
+    try:
+        _id_ = int(args[1])
+    except:
+        await bot.reply_to(message, 'Что-то с ID. Попробуйте ещё раз.')
+        return
+    
+    uninit.remove(where('id') == _id_)
+    await bot.reply_to(message, f'Удалил задание с id {_id_}')
+
+    
+@bot.message_handler(commands=['change'])
+async def change_chore(message):
+    logger.info('Entered change_chore')
+    if message.from_user.id not in parents:
+        await bot.reply_to(message, change_chore_failure_no_access)
+        return
+    
+    try:
+        args = message_parser.parse_change_chore(message)
+    except:
+        await bot.reply_to(message, change_chore_failure_format)
+        return
+    
+    uninit.update(operations.set('desc', args[1]), where('id') == args[0])
+    await bot.reply_to(message, f'Изменил задание с id {args[0]}')
+    
+
+@bot.message_handler(commands=['list'])
+async def list_chores(message):
+    logger.info('Entered list_chores')
+    args = message.text.split()
+    if len(args) > 2:
+        await bot.reply_to(message, 'Команда принимает 0 или 1 аргумент(-ов).')
+        return
+    
+    result_message = ''
+    if len(args) == 2:
+        if args[1] not in children:
+            await bot.reply_to(message, 'Проверьте ключ ребенка!')
+            return
+        
+        args[1] = name_to_id[args[1]]
+        tasks = uninit.search(where('id') == args[1])
+        for task in tasks:
+            result_message += f'id задания: {task['id']}. \nОписание: "{task['desc']}". \nБлижайшее время: {task['time']}.\n\n'
+        
+        await bot.reply_to(message, result_message)
+        
+    elif message.from_user.id not in parents:
+        args.append(message.from_user.id)
+        
+        tasks = uninit.search(where('id') == args[1])
+        for task in tasks:
+            result_message += f'{task['desc']}. \nБлижайшее время: {task['time']}.\n\n'
+        
+        await bot.reply_to(message, result_message)
+        
+    else:
+        tasks = uninit.search(lambda: True)
+        for task in tasks:
+            result_message += f'id задания: {task['id']}. Ребенок: {id_to_name[task['to']]}. \n'
+            result_message += f'Описание: "{task['desc']}". \nБлижайшее время: {task['time']}. \n\n'
+        
+        await bot.reply_to(message, result_message)
+        
+
+    
 @bot.message_handler(commands=['logout'])
 async def log_out(message):
     logger.info('Entered log_out')
@@ -96,27 +192,18 @@ async def log_out(message):
     await bot.reply_to(message, 'logging out')
     await bot.log_out()
     exit(0)
-
-@bot.message_handler(commands=['delchore'])
-async def delete_chore(message):
-    if message.from_user.id != DAD and message.from_user.id != MAX:
-        await bot.reply_to(message, add_chore_failure_no_access)
-        return
     
-    args = list(message.text.split())
-    try:
-        _id_ = int(args[1])
-    except:
-        await bot.reply_to(message, 'Что-то с ID. Попробуйте ещё раз.')
-        return
-    
-    uninit.remove(where('id') == _id_)
-    await bot.reply_to(message, f'Удалил задание с id {_id_}')
 
 @bot.message_handler()
 async def unknown_command(message):
     logger.info('Entered unknown_command')
     await bot.reply_to(message, 'Я вас не понял. Попробуйте ещё раз.')
+
+    
+# ^ | command reactions 
+# ---------------------------------------------------
+# v | remiders & asyncio wrap
+
 
 async def send_reminder():
     logger.info('Entered send_reminder')
@@ -127,7 +214,7 @@ async def send_reminder():
         
         for task in tasks:
             await bot.send_message(task['to'], task['desc'])
-            # bot.send_message(DAD, f"sent reminder to {task['to']} about task with id {task['id']}")
+            await bot.send_message(DAD, f"sent reminder to {id_to_name[task['to']]} about task with id {task['id']} and description '{task['desc']}'")
             logger.info(f"sent reminder to {task['to']} about task with id {task['id']}")
             if task['cron'] is not None:
                 uninit.update(operations.set('time', (croniter(task['cron'], 
