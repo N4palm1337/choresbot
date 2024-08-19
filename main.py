@@ -157,28 +157,37 @@ async def list_chores(message):
             return
         
         args[1] = name_to_id[args[1]]
-        tasks = uninit.search(where('id') == args[1])
+        tasks = uninit.search(where('to') == args[1])
         for task in tasks:
-            result_message += f"id задания: {task['id']}. \nОписание: '{task['desc']}'. \nБлижайшее время: {task['time']}.\n\n"
+            result_message += f"id задания: {task['id']}. \nОписание: '{task['desc']}'. \nБлижайшее время: {time.ctime(task['time'])}.\n\n"
         
-        await bot.reply_to(message, result_message)
+        if len(result_message) > 0:
+            await bot.reply_to(message, result_message)
+        else:
+            await bot.reply_to(message, 'Нету запланированных заданий.')
         
     elif message.from_user.id not in parents:
         args.append(message.from_user.id)
         
-        tasks = uninit.search(where('id') == args[1])
+        tasks = uninit.search(where('to') == args[1])
         for task in tasks:
-            result_message += f"{task['desc']}. \nБлижайшее время: {task['time']}.\n\n"
+            result_message += f"{task['desc']}. \nБлижайшее время: {time.ctime(task['time'])}.\n\n"
         
-        await bot.reply_to(message, result_message)
+        if len(result_message) > 0:
+            await bot.reply_to(message, result_message)
+        else:
+            await bot.reply_to(message, 'Нету запланированных заданий.')
         
     else:
-        tasks = uninit.search(lambda: True)
+        tasks = uninit.search(lambda m: True)
         for task in tasks:
             result_message += f"id задания: {task['id']}. Ребенок: {id_to_name[task['to']]}. \n"
-            result_message += f"Описание: '{task['desc']}'. \nБлижайшее время: {task['time']}. \n\n"
+            result_message += f"Описание: '{task['desc']}'. \nБлижайшее время: {time.ctime(task['time'])}. \n\n"
         
-        await bot.reply_to(message, result_message)
+        if len(result_message) > 0:
+            await bot.reply_to(message, result_message)
+        else:
+            await bot.reply_to(message, 'Нету запланированных заданий.')
         
 
     
