@@ -159,7 +159,7 @@ async def list_chores(message):
         args[1] = name_to_id[args[1]]
         tasks = uninit.search(where('id') == args[1])
         for task in tasks:
-            result_message += f'id задания: {task['id']}. \nОписание: "{task['desc']}". \nБлижайшее время: {task['time']}.\n\n'
+            result_message += f"id задания: {task['id']}. \nОписание: '{task['desc']}'. \nБлижайшее время: {task['time']}.\n\n"
         
         await bot.reply_to(message, result_message)
         
@@ -168,15 +168,15 @@ async def list_chores(message):
         
         tasks = uninit.search(where('id') == args[1])
         for task in tasks:
-            result_message += f'{task['desc']}. \nБлижайшее время: {task['time']}.\n\n'
+            result_message += f"{task['desc']}. \nБлижайшее время: {task['time']}.\n\n"
         
         await bot.reply_to(message, result_message)
         
     else:
         tasks = uninit.search(lambda: True)
         for task in tasks:
-            result_message += f'id задания: {task['id']}. Ребенок: {id_to_name[task['to']]}. \n'
-            result_message += f'Описание: "{task['desc']}". \nБлижайшее время: {task['time']}. \n\n'
+            result_message += f"id задания: {task['id']}. Ребенок: {id_to_name[task['to']]}. \n"
+            result_message += f"Описание: '{task['desc']}'. \nБлижайшее время: {task['time']}. \n\n"
         
         await bot.reply_to(message, result_message)
         
