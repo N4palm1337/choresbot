@@ -249,6 +249,11 @@ async def log_out(message):
     await bot.log_out()
     exit(0)
     
+@bot.message_handler(commands=['error'])
+async def raise_error(message):
+    logger.info('Entered raise_error')
+    raise ValueError('Error on purpose - checking infinite loop wrapping')
+    
 
 @bot.message_handler()
 async def unknown_command(message):
@@ -300,5 +305,10 @@ if __name__ == '__main__':
         level=logging.INFO
     )
     logger.info('---------------------------')
-    logger.info('About to enter main')
-    asyncio.run(main())
+    while True:
+        try:
+            logger.info('About to enter main')
+            asyncio.run(main())
+        except:
+            logger.info('Mistake in main, sleeping for a while')
+            time.sleep(10)
