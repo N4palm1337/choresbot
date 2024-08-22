@@ -178,6 +178,10 @@ async def list_chores(message):
         tasks = uninit.search(where('to') == args[1])
         for task in tasks:
             result_message += f"id задания: {task['id']}. \nОписание: '{task['desc']}'. \nБлижайшее время: {time.ctime(task['time'])}.\n\n"
+            if task['cron'] is not None:
+                result_message += f'Текущий cron: {task['cron']} \n\n'
+            else:
+                result_message += '\n'
         
         if len(result_message) > 0:
             await bot.reply_to(message, result_message)
@@ -200,7 +204,11 @@ async def list_chores(message):
         tasks = uninit.search(lambda m: True)
         for task in tasks:
             result_message += f"id задания: {task['id']}. Ребенок: {id_to_name[task['to']]}. \n"
-            result_message += f"Описание: '{task['desc']}'. \nБлижайшее время: {time.ctime(task['time'])}. \n\n"
+            result_message += f"Описание: '{task['desc']}'. \nБлижайшее время: {time.ctime(task['time'])}. \n"
+            if task['cron'] is not None:
+                result_message += f'Текущий cron: {task['cron']} \n\n'
+            else:
+                result_message += '\n'
         
         if len(result_message) > 0:
             await bot.reply_to(message, result_message)
