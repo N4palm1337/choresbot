@@ -334,8 +334,10 @@ async def resend_photo_proof(message):
     else:
         await bot.reply_to(message, 'Я вас не понял. Попробуйте ещё раз. Скорее всего, вы хотите ответить на другое сообщение.')
     
+    
 @bot.message_handler(commands=['text'])
-async def lorem_ipsum(message):
+async def send_lorem_ipsum(message):
+    logger.info('Entered send_lorem_ipsum')
     await bot.reply_to(message, lorem_ipsum)
 
 @bot.message_handler(func=lambda message: True)
