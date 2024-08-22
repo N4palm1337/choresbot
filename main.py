@@ -331,7 +331,8 @@ async def main():
     try:
         await fetch_task
         await send_task
-    except:
+    except Exception as e:
+        logger.error(f'Exception in await wrap: {e}')
         asyncio.sleep(10)
 
 
