@@ -18,17 +18,37 @@ def parse_add_chore(message):
     
     return ls[1:5]
 
-def parse_change_chore(message):
+def parse_change_chore_description(message):
     ls = list(message.text.split('\n'))
     if len(ls) != 3:
-        raise ValueError('Wrong format in delete_chore: message has to have 3 lines')
+        raise ValueError('Wrong format in change_chore_description: message has to have 3 lines')
     
     try:
         ls[1] = int(ls[1])
     except:
-        raise ValueError('Wrong format in delete_chore: first argument must be an integer')
+        raise ValueError('Wrong format in change_chore_description: first argument must be an integer')
     
     return ls[1:3]
+
+
+def parse_change_chore_time(message):
+    ls = list(message.text.split('\n'))
+    if len(ls) != 3:
+        raise ValueError('Wrong format in change_chore_time: message has to have 3 lines')
+    
+    try:
+        ls[1] = int(ls[1])
+    except:
+        raise ValueError('Wrong format in change_chore_time: first argument must be an integer')
+    
+    if croniter.is_valid(ls[2]):
+        ls.append(ls[2])
+        ls[2] = (croniter(ls[2], datetime.now(tz=timezone('Europe/Moscow')))).get_next()
+    else:
+        ls.append(None)
+        ls[2] = convert_to_unix_time(ls[2])
+    
+    return ls[1:4]
     
 
 def convert_to_unix_time(time_str):

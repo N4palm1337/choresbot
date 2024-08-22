@@ -125,22 +125,40 @@ async def delete_chore(message):
     await bot.reply_to(message, f'Удалил задание с id {_id_}')
 
     
-@bot.message_handler(commands=['change'])
-async def change_chore(message):
-    logger.info('Entered change_chore')
+@bot.message_handler(commands=['changedesc'])
+async def change_chore_description(message):
+    logger.info('Entered change_chore_description')
     if message.from_user.id not in parents:
         await bot.reply_to(message, change_chore_failure_no_access)
         return
     
     try:
-        args = message_parser.parse_change_chore(message)
+        args = message_parser.parse_change_chore_description(message)
     except:
         await bot.reply_to(message, change_chore_failure_format)
         return
     
     uninit.update(operations.set('desc', args[1]), where('id') == args[0])
-    await bot.reply_to(message, f'Изменил задание с id {args[0]}')
+    await bot.reply_to(message, f'Изменил описание задания с id {args[0]}')
     
+
+@bot.message_handler(commands=['changetime'])
+async def change_chore_time(message):
+    logger.info('Entered change_chore_time')
+    if message.from_user.id not in parents:
+        await bot.reply_to(message, change_chore_failure_no_access)
+        return
+    
+    try:
+        args = message_parser.parse_change_chore_time(message)
+    except:
+        await bot.reply_to(message, change_chore_failure_format)
+        return
+    
+    uninit.update(operations.set('time', args[1]), where('id') == args[0])
+    uninit.update(operations.set('cron', args[2]), where('id') == args[0])
+    await bot.reply_to(message, f'Изменил время задания с id {args[0]}')
+
 
 @bot.message_handler(commands=['list'])
 async def list_chores(message):
