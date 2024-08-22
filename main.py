@@ -48,6 +48,8 @@ change_chore_failure_no_access = message_parser.read_message_text('change_chore_
 
 change_chore_failure_format = message_parser.read_message_text('change_chore_failure_format')
 
+lorem_ipsum = message_parser.read_message_text('lorem_ipsum')
+
 DELAY = 10
 
 bot = AsyncTeleBot(TOKEN, parse_mode=None)
@@ -95,7 +97,7 @@ async def add_chore(message):
     with open('db/id_counter', 'r') as f:
         _id_ = int(f.read())
         
-    uninit.insert({'id': _id_, 'to': designated_child, 'desc': args[1], 'time': args[2], 'cron': args[3]})
+    uninit.insert({'id': _id_, 'to': designated_child, 'from': message.from_user.id, 'desc': args[1], 'time': args[2], 'cron': args[3]})
     
     with open('db/id_counter', 'w') as f:
         f.write(str(_id_ + 1))
@@ -169,15 +171,21 @@ async def list_chores(message):
         return
     
     result_message = ''
-    if len(args) == 2:
+    if len(args) == 2 and message.from_user.id in parents:
         if args[1] not in children:
-            await bot.reply_to(message, 'Проверьте ключ ребенка!')
-            return
+            try:
+                args[1] = int(args[1])
+            except:
+                await bot.reply_to(message, 'Проверьте аргумент!')
+                return
         
-        args[1] = name_to_id[args[1]]
-        tasks = uninit.search(where('to') == args[1])
+        if type(args[1]) == int:
+            tasks = uninit.search(where('id') == args[1])
+        else:
+            args[1] = name_to_id[args[1]]
+            tasks = uninit.search(where('to') == args[1])
         for task in tasks:
-            result_message += f"id задания: {task['id']}. \nОписание: '{task['desc']}'. \nБлижайшее время: {time.ctime(task['time'])}.\n\n"
+            result_message += f"id задания: {task['id']}. \nОписание: '{task['desc']}'. \nБлижайшее время: {time.ctime(task['time'])}.\n"
             if task['cron'] is not None:
                 result_message += f"Текущий cron: {task['cron']} \n\n"
             else:
@@ -187,13 +195,29 @@ async def list_chores(message):
             await bot.reply_to(message, result_message)
         else:
             await bot.reply_to(message, 'Нету запланированных заданий.')
+            
+    elif len(args) == 2:
+        try:
+            args[1] = int(args[1])
+        except:
+            await bot.reply_to(message, 'Проверьте id!')
+            return
         
+        tasks = uninit.search(where('id') == args[1])
+        for task in tasks:
+            result_message += f"id: {task['id']} \n {task['desc']}. \nБлижайшее время: {time.ctime(task['time'])}.\n\n"
+        
+        if len(result_message) > 0:
+            await bot.reply_to(message, result_message)
+        else:
+            await bot.reply_to(message, 'Нету запланированных заданий.')
+            
     elif message.from_user.id not in parents:
         args.append(message.from_user.id)
         
         tasks = uninit.search(where('to') == args[1])
         for task in tasks:
-            result_message += f"{task['desc']}. \nБлижайшее время: {time.ctime(task['time'])}.\n\n"
+            result_message += f"id: {task['id']} \n {task['desc']}. \nБлижайшее время: {time.ctime(task['time'])}.\n\n"
         
         if len(result_message) > 0:
             await bot.reply_to(message, result_message)
@@ -279,12 +303,46 @@ async def log_out(message):
 async def raise_error(message):
     logger.info('Entered raise_error')
     raise ValueError('Error on purpose - checking infinite loop wrapping')
-    
 
-@bot.message_handler()
+
+@bot.message_handler(content_types=['photo', 'video'])
+async def resend_photo_proof(message):
+    logger.info('Entered resend_photo_proof')
+    
+    if message.from_user.id in parents and message.from_user.id != MAX:
+        await bot.reply_to(message, 'Я вас не понял. Попробуйте ещё раз.')
+        return
+    
+    if message.reply_to_message is None:
+        await bot.reply_to(message, 'Я вас не понял. Попробуйте ещё раз.')
+        return
+    
+    replied_to = message.reply_to_message
+    id_of_chore = message_parser.check_if_message_is_a_reminder(replied_to)
+    
+    if id_of_chore != -1:
+        logger.info('About to resend messages')
+        try:
+            whom_to_forward = uninit.search(where('id') == id_of_chore)[0]['from']
+        except:
+            whom_to_forward = DAD
+        
+        logger.info(whom_to_forward)
+        await bot.forward_message(chat_id=whom_to_forward, from_chat_id=replied_to.chat.id, message_id=replied_to.message_id)
+        await bot.forward_message(chat_id=whom_to_forward, from_chat_id=message.chat.id, message_id=message.message_id)
+        await bot.reply_to(message, 'Отправил на проверку.')
+    else:
+        await bot.reply_to(message, 'Я вас не понял. Попробуйте ещё раз. Скорее всего, вы хотите ответить на другое сообщение.')
+    
+@bot.message_handler(commands=['text'])
+async def lorem_ipsum(message):
+    await bot.reply_to(message, lorem_ipsum)
+
+@bot.message_handler(func=lambda message: True)
 async def unknown_command(message):
     logger.info('Entered unknown_command')
     await bot.reply_to(message, 'Я вас не понял. Попробуйте ещё раз.')
+    return
 
     
 # ^ | command reactions 
@@ -300,7 +358,7 @@ async def send_reminder():
         tasks = uninit.search(where('time') <= time.time())
         
         for task in tasks:
-            await bot.send_message(task['to'], task['desc'])
+            await bot.send_message(task['to'], str(task['id']) + '\n' + task['desc']) # id in the beginning to distinguish reminders from other things
             await bot.send_message(DAD, f"sent reminder to {id_to_name[task['to']]} about task with id {task['id']} and description '{task['desc']}'")
             logger.info(f"sent reminder to {task['to']} about task with id {task['id']}")
             if task['cron'] is not None:
@@ -316,8 +374,11 @@ async def main():
     logger.info('Entered main')
     fetch_task = asyncio.create_task(bot.infinity_polling())
     send_task = asyncio.create_task(send_reminder())
-    await fetch_task
-    await send_task
+    try:
+        await fetch_task
+        await send_task
+    except:
+        asyncio.sleep(10)
 
 
 if __name__ == '__main__':
@@ -331,10 +392,5 @@ if __name__ == '__main__':
         level=logging.INFO
     )
     logger.info('---------------------------')
-    while True:
-        try:
-            logger.info('About to enter main')
-            asyncio.run(main())
-        except:
-            logger.info('Mistake in main, sleeping for a while')
-            time.sleep(10)
+    logger.info('About to enter main')
+    asyncio.run(main())

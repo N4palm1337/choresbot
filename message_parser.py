@@ -50,6 +50,18 @@ def parse_change_chore_time(message):
     
     return ls[1:4]
     
+    
+# accepts messages from bot only
+# returns id of chore if message is a reminder, and -1 otherwise
+def check_if_message_is_a_reminder(message) -> int: 
+    lines = list(message.text.split('\n'))
+    try:
+        lines[0] = int(lines[0])
+        return lines[0]
+    except:
+        return -1
+    
+    
 
 def convert_to_unix_time(time_str):
     return time.mktime(time.strptime(time_str, '%d/%m/%Y %H:%M'))
