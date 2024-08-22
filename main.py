@@ -240,54 +240,6 @@ async def list_chores(message):
             await bot.reply_to(message, 'Нету запланированных заданий.')
         
 
-@bot.message_handler(commands=['updmsg'])
-async def update_messages(message):
-    logger.info('Entered update_message')
-    if message.from_user.id != MAX:
-        await bot.reply_to(message, 'Я Вас не понял. Попробуйте ещё раз.')
-        return
-    
-    args = message.text.split()
-    
-    if len(args) != 2:
-        await bot.reply_to(message, 'wrong format')
-        return
-    
-    match args[1]:
-        case 'sm':
-            start_message = message_parser.read_message_text('start_message')
-
-        case 'imp':
-            info_message_parent = message_parser.read_message_text('info_message_parent')
-            
-        case 'imc':
-            info_message_child = message_parser.read_message_text('info_message_child')
-        
-        case 'acff':
-            add_chore_failure_format = message_parser.read_message_text('add_chore_failure_format')
-            
-        case 'acfcn':
-            add_chore_failure_child_name = message_parser.read_message_text('add_chore_failure_child_name')
-        
-        case 'acfna':
-            add_chore_failure_no_access = message_parser.read_message_text('add_chore_failure_no_access')
-            
-        case 'acs':
-            add_chore_success = message_parser.read_message_text('add_chore_success')
-            
-        case 'dcfna':
-            delete_chore_failure_no_access = message_parser.read_message_text('delete_chore_failure_no_access')
-
-        case 'ccfna':
-            change_chore_failure_no_access = message_parser.read_message_text('change_chore_failure_no_access')
-            
-        case 'ccff':
-            change_chore_failure_format = message_parser.read_message_text('change_chore_failure_format')
-        
-        case _:
-            await bot.reply_to(message, 'wrong format')
-    
-
 @bot.message_handler(commands=['logout'])
 async def log_out(message):
     logger.info('Entered log_out')
