@@ -179,7 +179,7 @@ async def list_chores(message):
         for task in tasks:
             result_message += f"id задания: {task['id']}. \nОписание: '{task['desc']}'. \nБлижайшее время: {time.ctime(task['time'])}.\n\n"
             if task['cron'] is not None:
-                result_message += f'Текущий cron: {task['cron']} \n\n'
+                result_message += f"Текущий cron: {task['cron']} \n\n"
             else:
                 result_message += '\n'
         
@@ -206,7 +206,7 @@ async def list_chores(message):
             result_message += f"id задания: {task['id']}. Ребенок: {id_to_name[task['to']]}. \n"
             result_message += f"Описание: '{task['desc']}'. \nБлижайшее время: {time.ctime(task['time'])}. \n"
             if task['cron'] is not None:
-                result_message += f'Текущий cron: {task['cron']} \n\n'
+                result_message += f"Текущий cron: {task['cron']} \n\n"
             else:
                 result_message += '\n'
         
