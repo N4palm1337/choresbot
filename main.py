@@ -67,7 +67,7 @@ async def introduce(message):
 async def give_info(message):
     logger.info('Entered give_info')
     if message.from_user.id not in parents:
-        await bot.reply_to(message, info_message_child)
+        await bot.reply_to(message, info_message_child, parse_mode='MarkdownV2')
     else:
         await bot.reply_to(message, info_message_parent, parse_mode='MarkdownV2')
         
@@ -279,7 +279,6 @@ async def resend_photo_proof(message):
         except:
             whom_to_forward = DAD
         
-        logger.info(whom_to_forward)
         await bot.forward_message(chat_id=whom_to_forward, from_chat_id=replied_to.chat.id, message_id=replied_to.message_id)
         await bot.forward_message(chat_id=whom_to_forward, from_chat_id=message.chat.id, message_id=message.message_id)
         await bot.reply_to(message, 'Отправил на проверку.')
