@@ -16,7 +16,7 @@ TOKEN = getenv('TOKEN')
 MAX = int(getenv('MAX'))
 DAD = int(getenv('DAD'))
 
-parents = [int(getenv('DAD')), int(getenv('MAX'))]
+parents = [int(getenv('DAD')), int(getenv('MOM')), int(getenv('MAX'))]
 children = ['MAX', 'STE', 'KSU', 'VAL']
 
 
